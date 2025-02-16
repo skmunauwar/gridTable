@@ -26,7 +26,7 @@
               <!-- Drag handler, header name and options container. -->
               <div class="drag-indicator">
                 <!-- Drag handler button. -->
-                <button mat-icon-button [attr.aria-label]="'Drag column ' + column.headerName"
+                <button *ngIf="column.isDraggable" mat-icon-button [attr.aria-label]="'Drag column ' + column.headerName"
                   cdkDragHandle>
                   <mat-icon class="material-symbol-outlined">drag_indicator</mat-icon>
                 </button>

@@ -39,10 +39,10 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
     displayFilter: true,
     filterValue: '',
     displayIcon: {
-      icon: 'home',
+      icon: 'bolt',
       outlined: true,
       iconPosition: 'end',
-      iconStyle: 'color: green',
+      iconStyle: 'color: purple',
       iconTooltip: 'Home icon is being displayed here at the end.'
     }
   },
@@ -58,10 +58,10 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
     displayFilter: true,
     filterValue: '',
     displayIcon: {
-      icon: 'info',
+      icon: 'favorite',
       outlined: false,
       iconPosition: 'start',
-      iconStyle: 'color: red',
+      iconStyle: 'color: orange',
       iconTooltip: 'Info icon is being displayed here at the start.'
     }
   },
@@ -152,7 +152,6 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
     columnPosition: 9,
     isSortable: false,
     isDraggable: false,
-    isPinnable: {pinnedLeft: false, pinnedRight: false},
     displayFilter: false,
     filterValue: '',
   },

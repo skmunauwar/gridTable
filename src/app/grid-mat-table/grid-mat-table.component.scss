@@ -6,9 +6,13 @@ $scrollbar-background: #ababab;
 
 :host {
     @include mat.form-field-density(-15);
-    @include mat.icon-button-density(-3);
-    @include mat.icon-density(-3);
+    @include mat.button-density(-3);
+    @include mat.icon-button-density(-5);
     @include mat.table-density(-3);
+
+    @include mat.table-overrides((
+        background-color: white,
+    ));
 }
 
 /* scrollbar */
@@ -65,7 +69,6 @@ table {
     border-bottom: 1px solid lightgray;
     box-shadow: none;
     min-width: max-content;
-    background-color: white;
 }
 
 .mat-mdc-paginator {
@@ -120,18 +123,19 @@ table {
     align-items: center;
     display: flex;
     width: -webkit-fill-available;
+    margin: 3px 0;
 }
 
 .column-header-style {
     font-weight: 600;
-    margin-right: 6px;
+    margin-right: 3px;
     cursor: pointer;
 }
 
 .filter-input {
     display: flex;
     margin-bottom: -12px;
-    max-width: 150px;
+    max-width: 200px;
     padding-left: 18px;
     width: -webkit-fill-available;
 }
@@ -159,4 +163,8 @@ table {
 
 .drag-indicator .sort-arrow {
     opacity: 0;
+}
+
+.spacer {
+    flex: 1 1 auto;
 }
