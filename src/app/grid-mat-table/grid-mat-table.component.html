@@ -1,14 +1,15 @@
 <div class="table-container">
   <div class="main thin-scrollbar">
-
+    <!-- Table starts here. -->
     <table mat-table class="mat-elevation-z8"
       [dataSource]="tableDataSource()"
       cdkDropList
-      (cdkDropListDropped)="dropListDropped($event)"
+      (cdkDropListDropped)="columnDropHandler($event)"
       cdkDropListLockAxis="x"
       cdkDropListOrientation="horizontal"
       >
 
+      <!-- Iterating over column definitions to display columns within the table. -->
       @for (column of inputColumnDefinitions(); track column.columnId) {
         <ng-container
           [matColumnDef]="column.columnId"
@@ -16,23 +17,28 @@
           [stickyEnd]="column.isPinnable?.pinnedRight"
           >
           
+          <!-- Header cell starts here. -->
           <mat-header-cell *matHeaderCellDef
             cdkDrag
             [cdkDragDisabled]="!column.isDraggable"
             >
             <div class="header-cell-container">
+              <!-- Drag handler, header name and options container. -->
               <div class="drag-indicator">
+                <!-- Drag handler button. -->
                 <button mat-icon-button [attr.aria-label]="'Drag column ' + column.headerName"
                   cdkDragHandle>
                   <mat-icon class="material-symbol-outlined">drag_indicator</mat-icon>
                 </button>
 
+                <!-- Header name to display. -->
                 <span class="column-header-style"
                   [attr.aria-label]="'Column header ' + column.headerName"
                   tabindex="0"
                   (click)="sortData(column.columnId)"
                   >{{column.headerName}}</span>
 
+                <!-- Sort button, icons changes based on sort direction. -->
                 @if(column.isSortable) {
                   <button mat-icon-button
                     class="sort-button"
@@ -46,37 +52,44 @@
                         <mat-icon class="material-symbol-outlined">arrow_downward_alt</mat-icon>
                       }
                     } @else {
-                      <mat-icon class="material-symbol-outlined sort-arrow">arrow_upward_alt</mat-icon>
+                      <mat-icon class="material-symbol-outlined sort-arrow">swap_vert</mat-icon>
                     }
                   </button>
                 }
 
+                <!-- Adds in empty space between the header name to move column options to the right. -->
                 <span class="spacer"></span>
 
+                <!-- If pinnable then, displayed the option menu for pinning the column to left or right or even remove. -->
                 @if(column.isPinnable) {
+                  <!-- Column option menu button -->
                   <button mat-icon-button [matMenuTriggerFor]="menu"
                     aria-label="Open column menu">
                     <mat-icon>more_vert</mat-icon>
                   </button>
+                  <!-- Menu with list of items. -->
                   <mat-menu #menu="matMenu">
+                    <!-- Pin left button. -->
                     @if(!column.isPinnable.pinnedLeft && !column.isPinnable.pinnedRight) {
                       <button mat-menu-item
                         (click)="column.isPinnable.pinnedLeft = true; setDisplayedColumns();">
-                        <mat-icon class="material-symbol-outlined">keep</mat-icon>
+                        <mat-icon class="material-icons">push_pin</mat-icon>
                         <span>Pin left</span>
                       </button>
                     }
+                    <!-- Pin right button. -->
                     @if(!column.isPinnable.pinnedLeft && !column.isPinnable.pinnedRight) {
                       <button mat-menu-item
                         (click)="column.isPinnable.pinnedRight = true; setDisplayedColumns();">
-                        <mat-icon class="material-symbol-outlined">keep</mat-icon>
+                        <mat-icon class="material-icons">push_pin</mat-icon>
                         <span>Pin right</span>
                       </button>
                     }
+                    <!-- Remove pin button. -->
                     @if(column.isPinnable.pinnedLeft || column.isPinnable.pinnedRight) {
                       <button mat-menu-item
                         (click)="column.isPinnable.pinnedLeft = false; column.isPinnable.pinnedRight = false; setDisplayedColumns();">
-                        <mat-icon class="material-symbol-outlined">keep_off</mat-icon>
+                        <mat-icon class="material-icons-outlined">push_pin</mat-icon>
                         <span>Remove pin</span>
                       </button>
                     }
@@ -84,10 +97,12 @@
                 }
               </div>
 
-              <mat-form-field appearance="outline" color="warn"
-                style="visibility: {{column.displayFilter ? 'visible' : 'hidden'}}"
+              <!-- Filter input field. If not column filter is required then its hidden. -->
+              <mat-form-field *ngIf="showFilterInputBar" appearance="outline" color="warn"
+                [style.visibility]="column.displayFilter ? 'visible' : 'hidden'"
                 class="filter-input"
                 >
+                <!-- Placeholder label to display contains or equals dynamically. -->
                 @if (column.type === 'number' || column.type === 'boolean') {
                   <mat-label class="filter-placeholder"
                     [attr.aria-label]="'Filter column' + column.headerName + ' matches by equals.'"
@@ -98,25 +113,31 @@
                     >Contains</mat-label>
                 }
                 
+                <!-- Input field. -->
                 <input matInput
                   [type]="column.type === 'number' ? 'number' : 'text'"
                   [(ngModel)]="column.filterValue"
                   (ngModelChange)="applyFilters()"
                 >
 
+                <!-- Clear button if input is present. -->
                 @if(column.filterValue) {
                   <button matSuffix mat-icon-button aria-label="Clear" (click)="column.filterValue = ''; applyFilters();">
                     <mat-icon>close</mat-icon>
                   </button>
                 } @else {
+                  <!-- Filter icon is display if no value. -->
                   <mat-icon matSuffix>filter_list</mat-icon>
                 }
               </mat-form-field>
             </div>
           </mat-header-cell>
+          <!-- Header cell end here. -->
 
+          <!-- Cell starts here. -->
           <mat-cell *matCellDef="let element" tabindex="0"> 
             <div style="display: flex; align-items: center;">
+              <!-- Start Icon. -->
               @if (column.displayIcon && column.displayIcon.iconPosition === 'start') {
                 <mat-icon 
                   class="icon-start"
@@ -126,18 +147,23 @@
                   >{{column.displayIcon.icon}}</mat-icon>
               }
 
+              <!-- Display row and column values. -->
               @if(column.isComputed && column.computeFunction) {
+                <!-- Displaying computed values. -->
                 <span [matTooltip]="column.computeFunction(element)">{{column.computeFunction(element)}}</span>
               } @else if(column.type === 'date') {
+                <!-- Displaying date values. -->
                 @if(column.dateFormat) {
                   <span [matTooltip]="element[column.field] | date: column.dateFormat">{{element[column.field] | date: column.dateFormat}}</span>
                 } @else {
                   <span [matTooltip]="element[column.field] | date: defaultDateFormat">{{element[column.field] | date: defaultDateFormat}}</span>
                 }
               } @else {
+                <!-- Displaying all other values. -->
                 <span [matTooltip]="element[column.field]">{{element[column.field]}}</span>
               }
 
+              <!-- End Icon. -->
               @if (column.displayIcon && column.displayIcon.iconPosition === 'end') {
                 <mat-icon 
                   class="icon-end"
@@ -148,6 +174,7 @@
               }
             </div>
           </mat-cell>
+          <!-- Cell ends here. -->
 
         </ng-container>
       }
@@ -157,8 +184,9 @@
         class="element-row" role="row"></mat-row>
 
     </table>
-
+    <!-- Table ends here. -->
   </div>
+  <!-- Paginator toolbar. -->
   <mat-paginator [pageSizeOptions]="paginatorOptions()"
     showFirstLastButtons
     aria-label="Select page">

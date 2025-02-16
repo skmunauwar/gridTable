@@ -62,6 +62,7 @@ $scrollbar-background: #ababab;
 }
 
 table {
+    border-bottom: 1px solid lightgray;
     box-shadow: none;
     min-width: max-content;
     background-color: white;
@@ -149,11 +150,11 @@ table {
 }
 
 .drag-indicator:hover .sort-arrow {
-    opacity: 0.5;
+    opacity: 0.3;
 }
 
 .drag-indicator:focus-within .sort-arrow {
-    opacity: 0.5;
+    opacity: 0.3;
 }
 
 .drag-indicator .sort-arrow {

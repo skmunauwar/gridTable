@@ -103,7 +103,7 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
     displayFilter: true,
     filterValue: '',
     isComputed: true,
-    computeFunction: (row: any) => (row.weight * 3).toString() + ' kg',
+    computeFunction: (row: any) => (row.weight * 3).toFixed(2) + ' kg',
   },
   {
     columnId: 'computed',
@@ -117,7 +117,7 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
     displayFilter: true,
     filterValue: '',
     isComputed: true,
-    computeFunction: (row: any) => row.weight.toString() + ' - ' + row.position.toString(),
+    computeFunction: (row: any) => row.weight.toFixed(2) + ' - ' + row.position.toString(),
   },
   {
     columnId: 'date1',
