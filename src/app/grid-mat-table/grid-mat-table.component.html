@@ -1,0 +1,166 @@
+<div class="table-container">
+  <div class="main thin-scrollbar">
+
+    <table mat-table class="mat-elevation-z8"
+      [dataSource]="tableDataSource()"
+      cdkDropList
+      (cdkDropListDropped)="dropListDropped($event)"
+      cdkDropListLockAxis="x"
+      cdkDropListOrientation="horizontal"
+      >
+
+      @for (column of inputColumnDefinitions(); track column.columnId) {
+        <ng-container
+          [matColumnDef]="column.columnId"
+          [sticky]="column.isPinnable?.pinnedLeft"
+          [stickyEnd]="column.isPinnable?.pinnedRight"
+          >
+          
+          <mat-header-cell *matHeaderCellDef
+            cdkDrag
+            [cdkDragDisabled]="!column.isDraggable"
+            >
+            <div class="header-cell-container">
+              <div class="drag-indicator">
+                <button mat-icon-button [attr.aria-label]="'Drag column ' + column.headerName"
+                  cdkDragHandle>
+                  <mat-icon class="material-symbol-outlined">drag_indicator</mat-icon>
+                </button>
+
+                <span class="column-header-style"
+                  [attr.aria-label]="'Column header ' + column.headerName"
+                  tabindex="0"
+                  (click)="sortData(column.columnId)"
+                  >{{column.headerName}}</span>
+
+                @if(column.isSortable) {
+                  <button mat-icon-button
+                    class="sort-button"
+                    [attr.aria-label]="getSortButtonAriaLabel(column.headerName, activeSort().direction)"
+                    (click)="sortData(column.columnId)"
+                    >
+                    @if(activeSort().active === column.columnId && activeSort().direction !== '') {
+                      @if(activeSort().direction === 'asc') {
+                        <mat-icon class="material-symbol-outlined">arrow_upward_alt</mat-icon>
+                      } @else {
+                        <mat-icon class="material-symbol-outlined">arrow_downward_alt</mat-icon>
+                      }
+                    } @else {
+                      <mat-icon class="material-symbol-outlined sort-arrow">arrow_upward_alt</mat-icon>
+                    }
+                  </button>
+                }
+
+                <span class="spacer"></span>
+
+                @if(column.isPinnable) {
+                  <button mat-icon-button [matMenuTriggerFor]="menu"
+                    aria-label="Open column menu">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #menu="matMenu">
+                    @if(!column.isPinnable.pinnedLeft && !column.isPinnable.pinnedRight) {
+                      <button mat-menu-item
+                        (click)="column.isPinnable.pinnedLeft = true; setDisplayedColumns();">
+                        <mat-icon class="material-symbol-outlined">keep</mat-icon>
+                        <span>Pin left</span>
+                      </button>
+                    }
+                    @if(!column.isPinnable.pinnedLeft && !column.isPinnable.pinnedRight) {
+                      <button mat-menu-item
+                        (click)="column.isPinnable.pinnedRight = true; setDisplayedColumns();">
+                        <mat-icon class="material-symbol-outlined">keep</mat-icon>
+                        <span>Pin right</span>
+                      </button>
+                    }
+                    @if(column.isPinnable.pinnedLeft || column.isPinnable.pinnedRight) {
+                      <button mat-menu-item
+                        (click)="column.isPinnable.pinnedLeft = false; column.isPinnable.pinnedRight = false; setDisplayedColumns();">
+                        <mat-icon class="material-symbol-outlined">keep_off</mat-icon>
+                        <span>Remove pin</span>
+                      </button>
+                    }
+                  </mat-menu>
+                }
+              </div>
+
+              <mat-form-field appearance="outline" color="warn"
+                style="visibility: {{column.displayFilter ? 'visible' : 'hidden'}}"
+                class="filter-input"
+                >
+                @if (column.type === 'number' || column.type === 'boolean') {
+                  <mat-label class="filter-placeholder"
+                    [attr.aria-label]="'Filter column' + column.headerName + ' matches by equals.'"
+                    >Equals</mat-label>
+                } @else {
+                  <mat-label class="filter-placeholder"
+                    [attr.aria-label]="'Filter column' + column.headerName + ' matches by contains.'"
+                    >Contains</mat-label>
+                }
+                
+                <input matInput
+                  [type]="column.type === 'number' ? 'number' : 'text'"
+                  [(ngModel)]="column.filterValue"
+                  (ngModelChange)="applyFilters()"
+                >
+
+                @if(column.filterValue) {
+                  <button matSuffix mat-icon-button aria-label="Clear" (click)="column.filterValue = ''; applyFilters();">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                } @else {
+                  <mat-icon matSuffix>filter_list</mat-icon>
+                }
+              </mat-form-field>
+            </div>
+          </mat-header-cell>
+
+          <mat-cell *matCellDef="let element" tabindex="0"> 
+            <div style="display: flex; align-items: center;">
+              @if (column.displayIcon && column.displayIcon.iconPosition === 'start') {
+                <mat-icon 
+                  class="icon-start"
+                  [class.material-symbol-outlined]="column.displayIcon.outlined"
+                  [style]="column.displayIcon.iconStyle"
+                  [matTooltip]="column.displayIcon.iconTooltip"
+                  >{{column.displayIcon.icon}}</mat-icon>
+              }
+
+              @if(column.isComputed && column.computeFunction) {
+                <span [matTooltip]="column.computeFunction(element)">{{column.computeFunction(element)}}</span>
+              } @else if(column.type === 'date') {
+                @if(column.dateFormat) {
+                  <span [matTooltip]="element[column.field] | date: column.dateFormat">{{element[column.field] | date: column.dateFormat}}</span>
+                } @else {
+                  <span [matTooltip]="element[column.field] | date: defaultDateFormat">{{element[column.field] | date: defaultDateFormat}}</span>
+                }
+              } @else {
+                <span [matTooltip]="element[column.field]">{{element[column.field]}}</span>
+              }
+
+              @if (column.displayIcon && column.displayIcon.iconPosition === 'end') {
+                <mat-icon 
+                  class="icon-end"
+                  [class.material-symbol-outlined]="column.displayIcon.outlined"
+                  [style]="column.displayIcon.iconStyle"
+                  [matTooltip]="column.displayIcon.iconTooltip"
+                  >{{column.displayIcon.icon}}</mat-icon>
+              }
+            </div>
+          </mat-cell>
+
+        </ng-container>
+      }
+      
+      <mat-header-row *matHeaderRowDef="displayedColumns(); sticky: true"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: displayedColumns();"
+        class="element-row" role="row"></mat-row>
+
+    </table>
+
+  </div>
+  <mat-paginator [pageSizeOptions]="paginatorOptions()"
+    showFirstLastButtons
+    aria-label="Select page">
+  </mat-paginator>
+</div>
