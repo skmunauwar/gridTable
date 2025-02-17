@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ColumnDefinition, GridMatTableComponent } from './grid-mat-table/grid-mat-table.component';
+import { MatButtonModule } from '@angular/material/button';
+import { AsyncPipe, TitleCasePipe } from '@angular/common';
+import { ThemeService } from './theme-service';
 
 export interface PeriodicElement {
   name: string;
@@ -11,8 +14,15 @@ export interface PeriodicElement {
 
 const ELEMENT_DATA: PeriodicElement[] = [
   {position: 1, name: 'Hydrogen', weight: 1.0079, symbol: 'H', foundationYear: '12/15/1901'},
+  {position: 15, name: 'Hydrogen', weight: 1.23, symbol: 'H1', foundationYear: '12/25/1901'},
+  {position: 16, name: 'Hydrogen', weight: 1.24, symbol: 'H2', foundationYear: '12/17/1901'},
+  {position: 17, name: 'Hydrogen', weight: 1.26, symbol: 'H3', foundationYear: '12/19/1901'},
   {position: 2, name: 'Helium', weight: 4.0026, symbol: 'He', foundationYear: '01/05/1911'},
+  {position: 18, name: 'Helium', weight: 4.12, symbol: 'He1', foundationYear: '01/07/1911'},
+  {position: 19, name: 'Helium', weight: 4.45, symbol: 'He2', foundationYear: '01/19/1911'},
   {position: 3, name: 'Lithium', weight: 6.941, symbol: 'Li', foundationYear: '03/08/1921'},
+  {position: 20, name: 'Lithium', weight: 6.951, symbol: 'Li1', foundationYear: '03/18/1921'},
+  {position: 21, name: 'Lithium', weight: 6.987, symbol: 'Li2', foundationYear: '03/21/1921'},
   {position: 4, name: 'Beryllium', weight: 9.0122, symbol: 'Be', foundationYear: '08/09/1925'},
   {position: 5, name: 'Boron', weight: 10.811, symbol: 'B', foundationYear: '09/10/1930'},
   {position: 6, name: 'Carbon', weight: 12.0107, symbol: 'C', foundationYear: '10/11/1930'},
@@ -140,7 +150,7 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
     columnPosition: 8,
     isSortable: true,
     isDraggable: true,
-    isPinnable: {pinnedLeft: false, pinnedRight: false},
+    isPinnable: {pinnedLeft: false, pinnedRight: false, disabledPinOpitons: true},
     displayFilter: true,
     filterValue: '',
   },
@@ -157,15 +167,46 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
   },
 ];
 
+type colorScheme = 'light' | 'dark' | 'system' | '';
+
 @Component({
   selector: 'app-root',
-  imports: [GridMatTableComponent],
+  imports: [GridMatTableComponent, MatButtonModule, TitleCasePipe, AsyncPipe],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
+  
   title = 'MyCompLibrary';
+
+  selectedTheme: colorScheme = '';
 
   tableData = ELEMENT_DATA;
   columnDefinition = COLUMN_DEFINITION;
+
+  ngOnInit(): void {
+    this.selectedTheme = document.body.style.colorScheme as colorScheme;
+    if(this.selectedTheme === '') {
+      this.selectedTheme = 'system';
+    }
+  }
+
+  changeTheme() {
+    if (this.selectedTheme === '' || this.selectedTheme === 'system') {
+      this.selectedTheme = 'light';
+      document.body.style.colorScheme = this.selectedTheme;
+    } else if (this.selectedTheme === 'light') {
+      this.selectedTheme = 'dark';
+      document.body.style.colorScheme = this.selectedTheme;
+    } else {
+      this.selectedTheme = 'system';
+      document.body.style.colorScheme = '';
+    }
+  }
+
+  themeService = inject(ThemeService);
+    
+  toggleTheme() {
+    this.themeService.toggleTheme();
+  }
 }

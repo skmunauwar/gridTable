@@ -24,7 +24,7 @@ export interface ColumnDefinition {
   filterValue?: string;
   isDraggable?: boolean;
   isSortable?: boolean;
-  isPinnable?: { pinnedLeft?: boolean; pinnedRight?: boolean };
+  isPinnable?: { pinnedLeft?: boolean; pinnedRight?: boolean; disabledPinOpitons?: boolean; };
   isComputed?: boolean;
   computeFunction?: (row: any) => string | number | boolean | any;
   displayIcon?: { // To display icon in the column.

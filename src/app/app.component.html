@@ -1,5 +1,16 @@
 <h3>Table Component</h3>
-<app-grid-mat-table 
+  <div class="example-button-row">
+    <button (click)="toggleTheme()">
+      {{ (themeService.isDarkTheme$ | async) ? 'Light Mode' : 'Dark Mode' }}
+    </button>
+    <button mat-button (click)="toggleTheme()">
+      {{ (themeService.isDarkTheme$ | async) ? 'Light Mode' : 'Dark Mode' }}
+    </button>
+    <button mat-flat-button (click)="changeTheme()">{{selectedTheme | titlecase}}</button>
+    <button mat-flat-button disabled>Disabled</button>
+    <a mat-flat-button href="https://www.google.com/" target="_blank">Link</a>
+  </div>
+<app-grid-mat-table
     style="display: block; height: 550px; min-width: 500px; margin: 24px;"
     [data]="tableData" [columnDefinitions]="columnDefinition">
 </app-grid-mat-table>

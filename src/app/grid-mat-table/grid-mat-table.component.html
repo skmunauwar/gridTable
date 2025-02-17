@@ -61,7 +61,7 @@
                 <span class="spacer"></span>
 
                 <!-- If pinnable then, displayed the option menu for pinning the column to left or right or even remove. -->
-                @if(column.isPinnable) {
+                @if(column.isPinnable && !column.isPinnable.disabledPinOpitons) {
                   <!-- Column option menu button -->
                   <button mat-icon-button [matMenuTriggerFor]="menu"
                     aria-label="Open column menu">
