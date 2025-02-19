@@ -47,6 +47,15 @@ $scrollbar-background: #ababab;
     width: -webkit-fill-available;
 }
 
+tr.detail-row {
+    height: 0;
+}
+
+.element-detail {
+    overflow: hidden;
+    display: flex;
+  }
+
 .main {
     display: flex;
     height: calc(100% - 56px);

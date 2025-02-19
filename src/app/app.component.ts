@@ -73,7 +73,9 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
       iconPosition: 'start',
       iconStyle: 'color: orange',
       iconTooltip: 'Info icon is being displayed here at the start.'
-    }
+    },
+    allowRowGrouping: true,
+    // groupRows: true,
   },
   {
     columnId: 'weight',
@@ -130,6 +132,22 @@ const COLUMN_DEFINITION: ColumnDefinition[] = [
     computeFunction: (row: any) => row.weight.toFixed(2) + ' - ' + row.position.toString(),
   },
   {
+    columnId: 'computed2',
+    field: '',
+    type: '',
+    headerName: 'Computed 2',
+    columnPosition: 14,
+    isSortable: true,
+    isDraggable: true,
+    isPinnable: {pinnedLeft: false, pinnedRight: false},
+    displayFilter: true,
+    filterValue: '',
+    isComputed: true,
+    computeFunction: (row: any) => row.name + ' - 1',
+    allowRowGrouping: true,
+    // groupRows: true,
+  },
+  {
     columnId: 'date1',
     field: 'foundationYear',
     type: 'date',
@@ -183,12 +201,14 @@ export class AppComponent implements OnInit {
 
   tableData = ELEMENT_DATA;
   columnDefinition = COLUMN_DEFINITION;
+  // columnDefinition2 = [...COLUMN_DEFINITION];
 
   ngOnInit(): void {
     this.selectedTheme = document.body.style.colorScheme as colorScheme;
     if(this.selectedTheme === '') {
       this.selectedTheme = 'system';
     }
+    // delete this.columnDefinition2[1].groupRows;
   }
 
   changeTheme() {

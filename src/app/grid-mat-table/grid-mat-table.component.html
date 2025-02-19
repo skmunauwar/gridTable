@@ -7,6 +7,7 @@
       (cdkDropListDropped)="columnDropHandler($event)"
       cdkDropListLockAxis="x"
       cdkDropListOrientation="horizontal"
+      multiTemplateDataRows
       >
 
       <!-- Iterating over column definitions to display columns within the table. -->
@@ -93,6 +94,20 @@
                         <span>Remove pin</span>
                       </button>
                     }
+                    <!-- Remove pin button. -->
+                    @if(column.allowRowGrouping && !column.groupRows) {
+                      <button mat-menu-item
+                        (click)="column.groupRows = true; setRowGroupingOnSelectedColumn();">
+                        <mat-icon class="material-icons-outlined">push_pin</mat-icon>
+                        <span>Group Rows</span>
+                      </button>
+                    } @else if (column.groupRows) {
+                      <button mat-menu-item
+                        (click)="column.groupRows = false; setRowGroupingOnSelectedColumn();">
+                        <mat-icon class="material-icons-outlined">push_pin</mat-icon>
+                        <span>Ungroup Rows</span>
+                      </button>
+                    }
                   </mat-menu>
                 }
               </div>
@@ -136,7 +151,7 @@
 
           <!-- Cell starts here. -->
           <mat-cell *matCellDef="let element" tabindex="0"> 
-            <div style="display: flex; align-items: center;">
+            <div *ngIf="!enableRowGrouping() || column.columnId === groupedColumn?.columnId" style="display: flex; align-items: center;">
               <!-- Start Icon. -->
               @if (column.displayIcon && column.displayIcon.iconPosition === 'start') {
                 <mat-icon 
@@ -178,10 +193,56 @@
 
         </ng-container>
       }
+
       
-      <mat-header-row *matHeaderRowDef="displayedColumns(); sticky: true"></mat-header-row>
-      <mat-row *matRowDef="let row; columns: displayedColumns();"
+
+      <ng-container *ngIf="enableRowGrouping()" matColumnDef="expand" sticky>
+        <th mat-header-cell *matHeaderCellDef aria-label="row actions">
+          <div style="display: flex; flex-direction: column;">
+            <div style="width: 28px;">&nbsp;</div>
+            <div *ngIf="showFilterInputBar" style="visibility: hidden; height: 60px;"></div>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let element">
+          <div style="display: flex; flex-direction: column;">
+            <div style="padding-top: 7px;">
+              <button mat-icon-button aria-label="expand row"
+                (click)="(expandedElement = expandedElement === element ? null : element); $event.stopPropagation()"
+                style="margin-bottom: 11px;">
+                @if (expandedElement === element) {
+                  <mat-icon>keyboard_arrow_up</mat-icon>
+                } @else {
+                  <mat-icon>keyboard_arrow_down</mat-icon>
+                }
+              </button>
+            </div>
+          </div>
+          
+        </td>
+      </ng-container>
+    
+      <!-- Iterating over column definitions to display columns within the table. -->
+      <ng-container
+        *ngIf="enableRowGrouping()"
+        matColumnDef="expandedDetail"
+        >
+          <mat-cell *matCellDef="let rowExpanded" [attr.colspan]="displayedColumnsWithExpand().length" style="background-color: blueviolet; padding-right: 0px; margin-left: 36px; border-bottom: none;">
+            <ng-container *ngIf="enableRowGrouping() && rowExpanded"
+              [ngTemplateOutlet]="tableTemplate"
+              [ngTemplateOutletContext]="{dataSource : getChildTableData(rowExpanded), inputColumnDefinitions: inputColumnDefinitions()}">
+            </ng-container>
+          </mat-cell>
+      </ng-container>
+      
+
+        
+      <mat-header-row *matHeaderRowDef="(enableRowGrouping() ? displayedColumnsWithExpand() : displayedColumns()); sticky: true"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: (enableRowGrouping() ? displayedColumnsWithExpand() : displayedColumns());"
         class="element-row" role="row"></mat-row>
+      <ng-container *ngIf="enableRowGrouping()">
+        <mat-row *matRowDef="let rowExpanded; columns: ['expandedDetail']" class="detail-row"
+          [@detailExpand]="rowExpanded == expandedElement ? 'expanded' : 'collapsed'"></mat-row>
+      </ng-container>
 
     </table>
     <!-- Table ends here. -->
@@ -192,3 +253,69 @@
     aria-label="Select page">
   </mat-paginator>
 </div>
+
+
+<!-- Child table template. -->
+<ng-template #tableTemplate let-dataSource="dataSource" let-inputColumnDefinitions="inputColumnDefinitions">
+  <!-- Table starts here. -->
+  <table mat-table class="mat-elevation-z8"
+    [dataSource]="dataSource"
+    style="width: -webkit-fill-available;"
+    >
+
+    <!-- Iterating over column definitions to display columns within the table. -->
+    @for (column of inputColumnDefinitions; track column.columnId) {
+      <ng-container
+        [matColumnDef]="column.columnId"
+        [sticky]="column.isPinnable?.pinnedLeft"
+        [stickyEnd]="column.isPinnable?.pinnedRight"
+        >
+        <!-- Cell starts here. -->
+        <mat-cell *matCellDef="let element" tabindex="0"> 
+          <div style="display: flex; align-items: center;">
+            <!-- Start Icon. -->
+            @if (column.displayIcon && column.displayIcon.iconPosition === 'start') {
+              <mat-icon 
+                class="icon-start"
+                [class.material-symbol-outlined]="column.displayIcon.outlined"
+                [style]="column.displayIcon.iconStyle"
+                [matTooltip]="column.displayIcon.iconTooltip"
+                >{{column.displayIcon.icon}}</mat-icon>
+            }
+
+            <!-- Display row and column values. -->
+            @if(column.isComputed && column.computeFunction) {
+              <!-- Displaying computed values. -->
+              <span [matTooltip]="column.computeFunction(element)">{{column.computeFunction(element)}}</span>
+            } @else if(column.type === 'date') {
+              <!-- Displaying date values. -->
+              @if(column.dateFormat) {
+                <span [matTooltip]="element[column.field] | date: column.dateFormat">{{element[column.field] | date: column.dateFormat}}</span>
+              } @else {
+                <span [matTooltip]="element[column.field] | date: defaultDateFormat">{{element[column.field] | date: defaultDateFormat}}</span>
+              }
+            } @else {
+              <!-- Displaying all other values. -->
+              <span [matTooltip]="element[column.field]">{{element[column.field]}}</span>
+            }
+
+            <!-- End Icon. -->
+            @if (column.displayIcon && column.displayIcon.iconPosition === 'end') {
+              <mat-icon 
+                class="icon-end"
+                [class.material-symbol-outlined]="column.displayIcon.outlined"
+                [style]="column.displayIcon.iconStyle"
+                [matTooltip]="column.displayIcon.iconTooltip"
+                >{{column.displayIcon.icon}}</mat-icon>
+            }
+          </div>
+        </mat-cell>
+        <!-- Cell ends here. -->
+      </ng-container>
+    }
+    
+    <mat-row *matRowDef="let row; columns: displayedColumns();"
+      class="element-row" role="row"></mat-row>
+  </table>
+  <!-- Table ends here. -->
+</ng-template>

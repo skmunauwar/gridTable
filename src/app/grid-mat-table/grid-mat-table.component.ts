@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, Input, signal, ViewChild, WritableSignal } from '@angular/core';
 import { CdkDrag, CdkDragHandle, DragDropModule, CdkDropList, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { DatePipe, NgIf } from '@angular/common';
+import { DatePipe, NgIf, NgTemplateOutlet } from '@angular/common';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Sort } from '@angular/material/sort';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -12,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 
 /** Column definition. */
 export interface ColumnDefinition {
@@ -35,6 +36,8 @@ export interface ColumnDefinition {
     iconTooltip?: string;
   }
   dateFormat?: string;
+  groupRows?: boolean;
+  allowRowGrouping?: boolean;
 }
 
 @Component({
@@ -42,16 +45,24 @@ export interface ColumnDefinition {
   imports: [
     CdkDrag, CdkDragHandle, CdkDropList, DragDropModule, MatTableModule, MatTooltipModule, DatePipe,
     MatButtonModule, MatIconModule, MatFormFieldModule, FormsModule, MatInputModule, MatPaginatorModule,
-    MatMenuModule, NgIf, MatDividerModule,
+    MatMenuModule, NgIf, MatDividerModule, NgTemplateOutlet,
   ],
   templateUrl: './grid-mat-table.component.html',
   styleUrl: './grid-mat-table.component.scss',
   standalone: true,
+  animations: [
+    trigger('detailExpand', [
+      state('collapsed,void', style({height: '0px', minHeight: '0'})),
+      state('expanded', style({height: '*'})),
+      transition('expanded <=> collapsed', animate('225ms cubic-bezier(0.4, 0.0, 0.2, 1)')),
+    ]),
+  ],
 })
 export class GridMatTableComponent implements AfterViewInit {
   readonly datePipe = new DatePipe('en-US')
   protected readonly defaultDateFormat = 'MM/dd/yyyy';
   protected displayedColumns: WritableSignal<string[]> = signal([]);
+  protected displayedColumnsWithExpand: WritableSignal<string[]> = signal(['expand']);
   protected tableDataSource = signal(new MatTableDataSource());
   protected activeSort: WritableSignal<Sort> = signal({ active: '', direction: '' });
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -60,6 +71,11 @@ export class GridMatTableComponent implements AfterViewInit {
   protected inputColumnDefinitions: WritableSignal<ColumnDefinition[]> = signal([]);
   private filteredData: any[] = [];
   protected showFilterInputBar = false;
+  protected rowGroupedData: WritableSignal<any[]> = signal([]);
+  protected enableRowGrouping = signal(false);
+  protected expandedElement: any;
+  protected groupedColumn?: ColumnDefinition;
+  protected childTableData: {[id: string]: any[]} = {};
 
   ngAfterViewInit() {
     this.tableDataSource().paginator = this.paginator;
@@ -69,7 +85,14 @@ export class GridMatTableComponent implements AfterViewInit {
   @Input() set data(data: any[]) {
     this.inputData.set(data);
     this.filteredData = data;
-    this.tableDataSource.set(new MatTableDataSource(data));
+    this.generateRowGroupedData(this.inputData());
+    if(this.enableRowGrouping()) {
+      this.tableDataSource().data = this.rowGroupedData();
+      this.tableDataSource.set(new MatTableDataSource(this.rowGroupedData()));
+    } else {
+      this.tableDataSource().data = this.inputData();
+      this.tableDataSource.set(new MatTableDataSource(this.inputData()));
+    }
     this.tableDataSource().paginator = this.paginator;
   }
   // Input parameter for paginator options for select dropdown.
@@ -78,6 +101,11 @@ export class GridMatTableComponent implements AfterViewInit {
   // Input parameter for column definitions.
   @Input() set columnDefinitions(input: ColumnDefinition[]) {
     this.inputColumnDefinitions.set(input);
+    this.setDisplayedColumns();
+  }
+
+  protected setRowGroupingOnSelectedColumn() {
+    this.data = this.inputData();
     this.setDisplayedColumns();
   }
 
@@ -108,11 +136,23 @@ export class GridMatTableComponent implements AfterViewInit {
         return 0;
       }
     });
+    // Sort grouped column to the left pinned columns first.
+    columnDefinition.sort((a, b) => {
+      if (!a.groupRows && b.groupRows) {
+        return 1;
+      } else if (a.groupRows && !b.groupRows) {
+        return -1;
+      } else {
+        return 0;
+      }
+    });
 
     // After sorting set
     this.inputColumnDefinitions.set(columnDefinition);
     // Set displayed columns as per the new order.
     this.displayedColumns.set(this.inputColumnDefinitions().map((col) => col.columnId));
+    // Set expanded column if needed.
+    this.displayedColumnsWithExpand.set(['expand', ...this.displayedColumns()]);
   }
 
   // Handler the column drop event to update column position.
@@ -141,8 +181,14 @@ export class GridMatTableComponent implements AfterViewInit {
 
     // If no column is found with filter value, then simply reset filters and return.
     if (appliedFilters.length === 0) {
-      this.tableDataSource().data = this.inputData();
-      this.filteredData = this.inputData();
+      if(this.enableRowGrouping()) {
+        this.generateRowGroupedData(this.inputData());
+        this.tableDataSource().data = this.rowGroupedData();
+        this.filteredData = this.rowGroupedData();
+      } else {
+        this.tableDataSource().data = this.inputData();
+        this.filteredData = this.inputData();
+      }
       return;
     }
 
@@ -180,7 +226,12 @@ export class GridMatTableComponent implements AfterViewInit {
     // Update filtered data object with new filtered data.
     this.filteredData = filteredData;
     // Update table data source with new filtered data.
-    this.tableDataSource().data = filteredData;
+    if(this.enableRowGrouping()) {
+      this.generateRowGroupedData(filteredData);
+      this.tableDataSource().data = this.rowGroupedData();
+    } else {
+      this.tableDataSource().data = filteredData;
+    }
   }
 
   // Handle custom column sort.
@@ -198,7 +249,17 @@ export class GridMatTableComponent implements AfterViewInit {
     this.activeSort.set(sort);
     // If sort is not enabled and has no direction then, reset data and return.
     if (!sort.active || sort.direction === '') {
-      this.tableDataSource().data = this.filteredData;
+      if(this.enableRowGrouping()) {
+        // console.log(this.inputData());
+        // this.generateRowGroupedData(this.inputData());
+        // this.tableDataSource().data = this.rowGroupedData();
+        this.applyFilters();
+        
+        console.log("this.rowGroupedData(): ", this.rowGroupedData());
+        console.log("this.childTableData(): ", this.childTableData);
+      } else {
+        this.tableDataSource().data = this.filteredData;
+      }
       return;
     }
 
@@ -215,10 +276,11 @@ export class GridMatTableComponent implements AfterViewInit {
     const dateFormat: string = column.dateFormat ?
       column.dateFormat : this.defaultDateFormat;
     // Copy the filtered data object.
-    const sortData = this.filteredData.slice();
+    // const sortData = this.filteredData.slice();
+    const sortData = this.inputData().slice();
 
     // Sort the copied data and assign to table data source.
-    this.tableDataSource().data = sortData.sort((a: any, b: any) => {
+    const sortedData = sortData.sort((a: any, b: any) => {
       const isAsc = sort.direction === 'asc';
 
       // Based on column type compare and return the compare value.
@@ -238,6 +300,12 @@ export class GridMatTableComponent implements AfterViewInit {
         return compareValues(a[column.field], b[column.field], isAsc);
       }
     });
+
+    
+    this.generateRowGroupedData(sortedData);
+    this.tableDataSource().data = sortedData;
+    console.log("this.rowGroupedData(): ", this.rowGroupedData());
+    console.log("this.childTableData(): ", this.childTableData);
   }
 
   protected getSortButtonAriaLabel(headerName: string, direction: string): string {
@@ -247,6 +315,72 @@ export class GridMatTableComponent implements AfterViewInit {
       return `Sort column ${headerName} in descending order.`;
     } else {
       return `Remove sort for column ${headerName}.`;
+    }
+  }
+
+  private generateRowGroupedData(data: any[]) {
+    const groupedRowColumn = this.inputColumnDefinitions().find((col) => col.groupRows);
+    if(!groupedRowColumn) {
+      this.enableRowGrouping.set(false);
+      this.rowGroupedData.set([]);
+      return;
+    }
+
+    this.enableRowGrouping.set(true);
+    this.groupedColumn = groupedRowColumn;
+    let uniqueColumnValues = [];
+    if(groupedRowColumn.isComputed && groupedRowColumn.computeFunction) {
+      const computeColumnValues = data.map((item: any) => {
+        if(this.groupedColumn?.computeFunction) {
+          return this.groupedColumn.computeFunction(item);
+        } else {
+          return undefined;
+        }
+      });
+      uniqueColumnValues = [...new Set(computeColumnValues.filter((computeValue) => !!computeValue))];
+    } else {
+      uniqueColumnValues = [...new Set(data.map((item: any) => item[groupedRowColumn.field]))];
+    }
+    const groupedData = uniqueColumnValues.map((col) => data.find((item: any) => {
+      if(groupedRowColumn.isComputed && groupedRowColumn.computeFunction) {
+        return groupedRowColumn.computeFunction(item) === col;
+      } else {
+        return item[groupedRowColumn.field] === col;
+      }
+    }));
+
+    this.childTableData = {};
+    for(const groupRow of groupedData) {
+      if(this.groupedColumn.isComputed && this.groupedColumn.computeFunction) {
+        const computeValue = this.groupedColumn.computeFunction(groupRow);
+        this.childTableData[computeValue] = this.getFilteredChildTableData(data, computeValue);
+      } else {
+        this.childTableData[groupRow[this.groupedColumn.field]] = this.getFilteredChildTableData(data, groupRow[this.groupedColumn.field]);
+      }
+    }
+
+    this.rowGroupedData.set(groupedData);
+    this.filteredData = groupedData;
+  }
+
+  protected getFilteredChildTableData(data: any[], uniqueValue: any) {
+    return data.filter((record: any) => {
+      if(this.groupedColumn) {
+        if(this.groupedColumn.isComputed && this.groupedColumn.computeFunction) {
+          return this.groupedColumn.computeFunction(record) === uniqueValue;
+        } else {
+          return record[this.groupedColumn.field] === uniqueValue;
+        }
+      }
+      return false;
+    });
+  }
+
+  protected getChildTableData(rowExpanded: any): any[] {
+    if(this.groupedColumn?.isComputed && this.groupedColumn?.computeFunction) {
+      return this.childTableData[this.groupedColumn.computeFunction(rowExpanded)] ?? [];
+    } else {
+      return this.childTableData[(rowExpanded[this.groupedColumn?.columnId ?? ''])] ?? [];
     }
   }
 }
@@ -259,3 +393,19 @@ function compareValues(
 ) {
   return (a < b ? -1 : 1) * (isAscending ? 1 : -1);
 }
+
+// Usage
+// const groupedData = groupBy(this.inputData(), (i: any) => {
+//   if(groupedRowColumn.isComputed && groupedRowColumn.computeFunction) {
+//     return groupedRowColumn.computeFunction(i);
+//   } else {
+//     return i[groupedRowColumn.field];
+//   }
+// });
+
+// A little bit simplified version
+const groupBy = <T, K extends keyof any>(arr: T[], key: (i: T) => K) =>
+  arr.reduce((groups, item) => {
+    (groups[key(item)] ||= []).push(item);
+    return groups;
+  }, {} as Record<K, T[]>);
